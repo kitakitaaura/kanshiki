@@ -1,5 +1,8 @@
 # Kanshiki 鑑識 by KitaKita
 
+Warning this README is half AI generated, I'm writing my own after some testing give me a bit lmao :( 
+
+
 Paste a health claim. Kanshiki finds what has actually been published about it on
 PubMed, grades that evidence against a fixed study-quality hierarchy, and writes a
 short, honest summary with every source linked.
