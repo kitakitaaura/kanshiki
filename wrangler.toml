@@ -7,7 +7,11 @@ pages_build_output_dir = "public"
 [ai]
 binding = "AI"
 
+# Deployed-instance settings. Local runs override these from .dev.vars, which
+# is why running locally stays on Ollama with no rate limit.
 [vars]
 LOCAL_MODE = "false"
+DEPLOY_MODE = "demo"
 NCBI_TOOL = "kanshiki"
 WORKERS_AI_MODEL = "@cf/meta/llama-3.1-8b-instruct-fp8"
+REQUEST_TIMEOUT_SECONDS = "60"
