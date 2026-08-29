@@ -1,0 +1,96 @@
+.doc { max-width: 760px; margin: 0 auto; padding: 0 20px 64px; }
+
+.lead { font-size: 16px; color: var(--muted); margin: 0 0 20px; max-width: 66ch; }
+
+.toc {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 14px 0 22px;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 8px;
+}
+.toc a {
+  font-size: 12px;
+  padding: 4px 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--muted);
+  text-decoration: none;
+}
+.toc a:hover { border-color: var(--accent); color: var(--accent); }
+
+.doc section { margin-top: 38px; scroll-margin-top: 16px; }
+
+.doc h2 {
+  font-size: 18px;
+  margin: 0 0 10px;
+  letter-spacing: -.01em;
+  border-top: 1px solid var(--line);
+  padding-top: 20px;
+}
+.doc section:first-of-type h2 { border-top: 0; padding-top: 0; }
+
+.doc h3 {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin: 22px 0 8px;
+}
+
+.doc p { font-size: 15px; max-width: 66ch; }
+.doc ul { font-size: 14.5px; padding-left: 20px; max-width: 68ch; }
+.doc li { margin-bottom: 7px; }
+
+.doc .aside {
+  font-size: 13px;
+  color: var(--muted);
+  background: rgba(127, 127, 127, .07);
+  border-left: 2px solid var(--line);
+  padding: 10px 14px;
+  border-radius: 0 6px 6px 0;
+}
+
+.api-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13.5px;
+  margin: 12px 0 16px;
+  display: block;
+  overflow-x: auto;
+}
+.api-table th {
+  text-align: left;
+  font-size: 11px;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  border-bottom: 1px solid var(--ink);
+  padding: 0 12px 6px 0;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.api-table td {
+  border-bottom: 1px solid var(--line);
+  padding: 9px 12px 9px 0;
+  vertical-align: top;
+}
+.api-table td:first-child { white-space: nowrap; }
+
+.code {
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 14px;
+  overflow-x: auto;
+  font-size: 12.5px;
+  line-height: 1.55;
+  margin: 12px 0 16px;
+}
+.code code {
+  background: none;
+  padding: 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}

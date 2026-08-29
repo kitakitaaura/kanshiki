@@ -1,0 +1,322 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Kanshiki API</title>
+<meta name="description" content="Open, rate-limited HTTP API for grading health claims against published evidence and appraising individual studies." />
+<link rel="stylesheet" href="/styles.css" />
+<link rel="stylesheet" href="/api.css" />
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='26' font-size='26'>🔬</text></svg>" />
+</head>
+<body>
+  <header class="site">
+    <div class="wordmark">
+      <span class="kanji" aria-hidden="true">鑑識</span>
+      <div>
+        <h1>Kanshiki API</h1>
+        <p class="tagline">Open HTTP API. No key, no account, rate limited.</p>
+      </div>
+    </div>
+  </header>
+
+  <main class="doc">
+    <p class="lead">
+      Every endpoint takes a JSON POST body and returns JSON, except the export endpoint, which
+      returns a file. There is no authentication. Responses are computed live and are not cached.
+    </p>
+
+    <nav class="toc">
+      <a href="#conventions">Conventions</a>
+      <a href="#limits">Rate limits</a>
+      <a href="#check-claim">POST /api/check-claim</a>
+      <a href="#inspect-study">POST /api/inspect-study</a>
+      <a href="#extract-query">POST /api/extract-query</a>
+      <a href="#export">POST /api/export</a>
+      <a href="#health">GET /api/health</a>
+      <a href="#errors">Errors</a>
+    </nav>
+
+    <section id="conventions">
+      <h2>Conventions</h2>
+      <ul>
+        <li>All request bodies are <code>application/json</code>. Send <code>content-type: application/json</code>.</li>
+        <li>All timestamps and years are plain numbers or ISO strings. Weights are fractions between 0 and 1.</li>
+        <li>Fields that could not be determined are <code>null</code> rather than absent or zero. A <code>null</code> means "unknown", not "none".</li>
+        <li>Every scoring threshold used to produce a verdict is echoed back in the response, so a grade can be reproduced without reading the source.</li>
+        <li>Both pipelines degrade rather than fail. If the language model is unreachable you still get a graded result, with <code>meta.aiDegraded: true</code>.</li>
+      </ul>
+    </section>
+
+    <section id="limits">
+      <h2>Rate limits</h2>
+      <p>
+        This is an open API with no key. It is rate limited per IP address. Treat it as a
+        courtesy service rather than infrastructure: a claim check makes several upstream calls
+        to NCBI and OpenAlex on your behalf, and those services have their own limits.
+      </p>
+      <table class="api-table">
+        <thead><tr><th>Endpoint</th><th>Cost</th><th>Guidance</th></tr></thead>
+        <tbody>
+          <tr><td><code>/api/check-claim</code></td><td>High. 3 upstream PubMed calls plus up to 5 model calls.</td><td>Sequential use only. Do not run in parallel.</td></tr>
+          <tr><td><code>/api/inspect-study</code></td><td>Medium. 1 to 4 OpenAlex calls, 1 PubMed call, 1 model call.</td><td>Pass <code>record</code> to skip the PubMed call.</td></tr>
+          <tr><td><code>/api/extract-query</code></td><td>Low. 1 model call, no upstream data calls.</td><td>Cheap way to preview a query.</td></tr>
+          <tr><td><code>/api/export</code></td><td>None. Pure formatting of a result you already hold.</td><td>Unrestricted in practice.</td></tr>
+        </tbody>
+      </table>
+      <p class="aside">
+        Exceeding the limit returns <code>429</code> with a <code>Retry-After</code> header. If you
+        need volume beyond this, run your own instance: the whole thing deploys to a free
+        Cloudflare Pages account. Key-based access could be added if usage warrants it, but no key
+        system exists today.
+      </p>
+    </section>
+
+    <section id="check-claim">
+      <h2>POST /api/check-claim</h2>
+      <p>Grades a health claim against the published literature.</p>
+
+      <h3>Request</h3>
+      <table class="api-table">
+        <thead><tr><th>Field</th><th>Type</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td><code>claim</code></td><td>string</td><td>Required. Free text, up to 4000 characters. A sentence, a headline, or a pasted paragraph.</td></tr>
+          <tr><td><code>query</code></td><td>string</td><td>Optional. A PubMed query used verbatim, including field tags and boolean operators. Supplying it skips AI query extraction entirely.</td></tr>
+          <tr><td><code>useAi</code></td><td>boolean</td><td>Optional, defaults <code>true</code>. When <code>false</code>, no model is called: direction is not assessed and the summary is assembled from study metadata.</td></tr>
+        </tbody>
+      </table>
+
+      <pre class="code"><code>curl -X POST https://your-host/api/check-claim \
+  -H 'content-type: application/json' \
+  -d '{"claim": "Turmeric reduces arthritis pain"}'</code></pre>
+
+      <h3>Response</h3>
+      <pre class="code"><code>{
+  "claim": "Turmeric reduces arthritis pain",
+  "query": "turmeric arthritis pain",
+  "queryMode": "auto-extracted",
+  "summary": "Several meta-analyses report...",
+  "verdict": {
+    "label": "strong",
+    "labelText": "Strong evidence",
+    "score": 298.8,
+    "topTier": "meta-analysis",
+    "counts": { "meta-analysis": 6, "rct": 3, "observational": 2 },
+    "rationale": ["Capped below Strong: ..."],
+    "thresholds": { "strong": 140, "moderate": 50, "weak": 15 },
+    "oldestYear": 2015, "newestYear": 2026
+  },
+  "direction": {
+    "direction": "mixed",
+    "directionText": "Mixed evidence",
+    "supportWeight": 121.4, "contradictWeight": 98.2,
+    "decisiveShare": 0.75,
+    "counts": { "supports": 5, "contradicts": 5, "neutral": 2, "unassessed": 8 },
+    "assessed": 12
+  },
+  "fundingBreakdown": {
+    "industryWeight": 0.26, "nonIndustryWeight": 0.17, "undisclosedWeight": 0.57,
+    "coverage": 0.43, "sufficient": false,
+    "amongSupporting": { "industry": 1, "total": 4 }
+  },
+  "timeline": [
+    { "year": 2019, "strength": "moderate", "strengthText": "Moderate evidence",
+      "direction": "supported", "directionText": "Supported by the evidence",
+      "score": 73.5, "studyCount": 3 }
+  ],
+  "spotlight": { "for": { "pmid": "...", "excerpt": "..." }, "against": { "pmid": "..." } },
+  "studies": [
+    {
+      "pmid": "35935936", "title": "...", "journal": "...", "year": 2022,
+      "type": "meta-analysis", "typeLabel": "Meta-analysis",
+      "sampleSize": 2396, "stance": "supports", "partialRead": true,
+      "fundingSource": "undisclosed", "fundingLabel": "Funding not disclosed",
+      "retraction": { "retracted": false, "noticeUrl": null },
+      "authors": ["Zeng L", "Yang T"], "doi": "10.3389/...", "abstract": "...",
+      "volume": "13", "issue": "", "pages": "891822",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/35935936/"
+    }
+  ],
+  "meta": {
+    "totalMatches": 445, "shown": 20, "searchError": null,
+    "aiDegraded": false, "aiDisabled": false, "stanceDegraded": false,
+    "partialReads": 9, "timelineSkipped": null, "elapsedMs": 19300
+  }
+}</code></pre>
+
+      <h3>Field notes</h3>
+      <ul>
+        <li><code>verdict</code> grades <strong>how strong the research on the topic is</strong>. It is not a ruling on the claim. <code>label</code> is one of <code>strong</code>, <code>moderate</code>, <code>weak</code>, <code>insufficient</code>.</li>
+        <li><code>direction</code> grades <strong>which way that research points</strong>, weighted by the same quality tiers. <code>direction</code> is one of <code>supported</code>, <code>leans-supported</code>, <code>mixed</code>, <code>leans-contradicted</code>, <code>contradicted</code>, <code>unassessed</code>. It stays <code>unassessed</code> unless studies carrying at least 30% of total weight received a for-or-against stance.</li>
+        <li><code>verdict.rationale</code> lists any structural gate that demoted the grade, in plain English. Empty when no gate applied.</li>
+        <li><code>fundingBreakdown.sufficient</code> is <code>false</code> when most of the weighted evidence did not disclose funding. Do not present the weights as meaningful when this is <code>false</code>.</li>
+        <li><code>timeline</code> is an empty array when there is too little history. The reason is in <code>meta.timelineSkipped</code>.</li>
+        <li><code>spotlight</code> is <code>null</code> unless <code>direction</code> is <code>mixed</code> and both sides have at least one study.</li>
+        <li><code>studies[].partialRead</code> means the stance was judged from a truncated abstract. It is a transparency flag and never affects any score.</li>
+        <li><code>studies[].retraction.retracted</code> is carried for display. It does <strong>not</strong> currently reduce a study's contribution to the grade.</li>
+        <li><code>queryMode</code> is <code>auto-extracted</code>, <code>user-edited</code>, or <code>keyword-fallback</code>, so a reviewer can tell how the search was built.</li>
+      </ul>
+    </section>
+
+    <section id="inspect-study">
+      <h2>POST /api/inspect-study</h2>
+      <p>Appraises a single study: summary, credibility signals, citation and venue statistics, and citations in five formats.</p>
+
+      <h3>Request</h3>
+      <table class="api-table">
+        <thead><tr><th>Field</th><th>Type</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td><code>ref</code></td><td>string</td><td>Required. A PubMed URL, a bare PMID, or a DOI. <code>pmid</code> is accepted as an alias.</td></tr>
+          <tr><td><code>record</code></td><td>object</td><td>Optional. A study object from a <code>check-claim</code> response. When its <code>pmid</code> matches and it carries an abstract, PubMed is not called again.</td></tr>
+          <tr><td><code>useAi</code></td><td>boolean</td><td>Optional, defaults <code>true</code>. When <code>false</code>, <code>summary</code> is empty and the abstract stands in.</td></tr>
+        </tbody>
+      </table>
+
+      <pre class="code"><code>curl -X POST https://your-host/api/inspect-study \
+  -H 'content-type: application/json' \
+  -d '{"ref": "https://pubmed.ncbi.nlm.nih.gov/9500320/"}'</code></pre>
+
+      <h3>Response</h3>
+      <pre class="code"><code>{
+  "record": {
+    "pmid": "9500320", "title": "...", "abstract": "...",
+    "journal": "Lancet (London, England)", "journalAbbrev": "Lancet",
+    "year": 1998, "volume": "351", "issue": "9103", "pages": "637-41",
+    "doi": "10.1016/s0140-6736(97)11096-0",
+    "authors": [{ "name": "A J Wakefield", "last": "Wakefield", "initials": "AJ",
+                  "affiliation": "..." }],
+    "type": "other", "typeLabel": "Other",
+    "pubTypes": ["Journal Article", "Retracted Publication"],
+    "meshTerms": ["Child", "Measles Vaccine"],
+    "sampleSize": null,
+    "fundingSource": "undisclosed", "fundingLabel": "Funding not disclosed",
+    "retraction": { "retracted": true, "expressionOfConcern": true,
+                    "isRetractionNotice": false,
+                    "noticeUrl": "https://pubmed.ncbi.nlm.nih.gov/15016483/" },
+    "url": "https://pubmed.ncbi.nlm.nih.gov/9500320/"
+  },
+  "summary": "The study tested...",
+  "partialRead": false,
+  "credibility": {
+    "label": "retracted", "labelText": "Retracted", "composite": 0.12,
+    "retracted": true, "expressionOfConcern": true,
+    "retractionNoticeUrl": "https://pubmed.ncbi.nlm.nih.gov/15016483/",
+    "signals": [
+      { "key": "design", "label": "Study design", "score": 0.25,
+        "available": true, "detail": "Other" },
+      { "key": "sample", "label": "Sample size", "score": null,
+        "available": false, "detail": "No enrollment figure found in the abstract" }
+    ],
+    "coverage": { "scored": 5, "total": 6 },
+    "note": "This paper has been retracted...",
+    "measures": "Credibility signals only: ..."
+  },
+  "metrics": {
+    "available": true, "source": "openalex",
+    "citations": 2953, "citationsPerYear": 105.5, "ageYears": 28,
+    "relativeToVenue": 5.25,
+    "venue": { "name": "The Lancet", "journalCitationRate": 20.11,
+               "hIndex": 1209, "worksCount": 475874, "isOpenAccess": false },
+    "authors": [{ "role": "first", "name": "A J Wakefield", "matched": true,
+                  "hIndex": 34, "worksCount": 83, "citedByCount": 6966 }],
+    "authorsMatched": true, "openAlexRetracted": true, "note": null
+  },
+  "citations": { "apa": "...", "mla": "...", "chicago": "...",
+                 "bibtex": "...", "ris": "..." },
+  "meta": { "fromCache": false, "aiDegraded": false, "aiDisabled": false,
+            "elapsedMs": 5005 }
+}</code></pre>
+
+      <h3>Field notes</h3>
+      <ul>
+        <li><code>credibility</code> measures <strong>research credibility signals</strong>: retraction status, study design, sample size, citation traction, venue standing, author track record, funding disclosure. It does not measure whether the findings are correct, and the response says so in <code>measures</code>.</li>
+        <li>Retraction is a hard override. A retracted paper is capped near the floor regardless of every other signal, and <code>signals</code> still reports what was measured so you can see what was overridden.</li>
+        <li>Signals with no data have <code>available: false</code> and <code>score: null</code>, and are excluded from the composite rather than counted as zero. <code>coverage</code> reports how many of the six had data.</li>
+        <li><code>metrics.venue.journalCitationRate</code> is OpenAlex mean citedness. It is <strong>not</strong> Impact Factor, which is a different, proprietary metric.</li>
+        <li><code>metrics.authors[].matched: false</code> means no confident match to an indexed profile. The figures are <code>null</code> rather than guessed.</li>
+        <li><code>metrics.available: false</code> means neither OpenAlex nor Semantic Scholar had a record. This is normal for very new or unindexed papers.</li>
+      </ul>
+    </section>
+
+    <section id="extract-query">
+      <h2>POST /api/extract-query</h2>
+      <p>Builds the PubMed query for a claim without running the pipeline. Useful for previewing or editing a query before committing to a full check.</p>
+      <pre class="code"><code>curl -X POST https://your-host/api/extract-query \
+  -H 'content-type: application/json' \
+  -d '{"claim": "Vitamin D cures depression"}'
+
+{ "claim": "Vitamin D cures depression",
+  "query": "vitamin D supplementation depressive symptoms",
+  "mode": "auto-extracted",
+  "degraded": false }</code></pre>
+      <p>Pass the returned <code>query</code> back to <code>/api/check-claim</code>, edited or not, to control the search exactly.</p>
+    </section>
+
+    <section id="export">
+      <h2>POST /api/export</h2>
+      <p>Formats a result you already have. It fetches nothing and computes no scores.</p>
+      <table class="api-table">
+        <thead><tr><th>Field</th><th>Values</th></tr></thead>
+        <tbody>
+          <tr><td><code>kind</code></td><td><code>claim</code>, <code>study</code>, or <code>collection</code></td></tr>
+          <tr><td><code>format</code></td><td><code>ris</code>, <code>csv</code>, or <code>html</code> (a printable report)</td></tr>
+          <tr><td><code>result</code></td><td>The response object from check-claim or inspect-study. For <code>collection</code>, <code>{ "items": [{ "kind", "result" }] }</code>.</td></tr>
+        </tbody>
+      </table>
+      <p>
+        The response body is the file itself, with the matching content type. CSV columns are:
+        title, authors, journal, year, study type, sample size, direction, funding, retracted,
+        DOI, PMID, PubMed link. RIS uses standard tags (TY, AU, TI, JO, PY, VL, IS, SP, EP, DO,
+        AB, AN, UR, KW, ER) and imports into Zotero, EndNote, and Mendeley.
+      </p>
+    </section>
+
+    <section id="health">
+      <h2>GET /api/health</h2>
+      <pre class="code"><code>{ "ok": true, "aiBackend": "workers-ai",
+  "model": "@cf/meta/llama-3.1-8b-instruct",
+  "workersAiBindingPresent": true, "ncbiApiKey": true }</code></pre>
+      <p>Reports which model backend is configured. It does not call the model.</p>
+    </section>
+
+    <section id="errors">
+      <h2>Errors</h2>
+      <p>Errors are JSON with a single human-readable <code>error</code> field. There are no error codes to switch on.</p>
+      <table class="api-table">
+        <thead><tr><th>Status</th><th>Meaning</th></tr></thead>
+        <tbody>
+          <tr><td><code>400</code></td><td>Malformed JSON, a missing required field, or an unreadable reference.</td></tr>
+          <tr><td><code>404</code></td><td>No PubMed record for that PMID or DOI.</td></tr>
+          <tr><td><code>405</code></td><td>Wrong method. Every data endpoint is POST except health.</td></tr>
+          <tr><td><code>413</code></td><td>Claim longer than 4000 characters.</td></tr>
+          <tr><td><code>429</code></td><td>Rate limited. Check <code>Retry-After</code>.</td></tr>
+          <tr><td><code>502</code></td><td>An upstream service failed in a way the pipeline could not absorb.</td></tr>
+        </tbody>
+      </table>
+      <p class="aside">
+        A zero-result search is <strong>not</strong> an error. It returns <code>200</code> with
+        <code>verdict.label: "insufficient"</code> and an empty <code>studies</code> array.
+      </p>
+    </section>
+
+    <section>
+      <h2>Attribution and limits of use</h2>
+      <p>
+        Study data comes from PubMed via NCBI E-utilities. Citation, venue, and author statistics
+        come from OpenAlex, with Semantic Scholar as a fallback. If you build on this API, cite
+        those sources directly rather than crediting Kanshiki for the underlying data.
+      </p>
+      <p>
+        Kanshiki grades published evidence, not anyone's situation. It is not medical advice, and
+        responses must not be presented as a clinical recommendation.
+      </p>
+    </section>
+  </main>
+
+  <footer>
+    <a href="/">Back to Kanshiki</a> · <a href="/about.html">About</a> · Sources from
+    <a href="https://pubmed.ncbi.nlm.nih.gov/" rel="noopener">PubMed</a> and
+    <a href="https://openalex.org/" rel="noopener">OpenAlex</a>
+  </footer>
+</body>
+</html>

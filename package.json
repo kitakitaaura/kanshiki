@@ -1,0 +1,16 @@
+{
+  "name": "kanshiki",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "\u9451\u8b58 \u2014 grades the scientific evidence behind a health claim.",
+  "scripts": {
+    "dev": "wrangler pages dev",
+    "test": "node --test 'test/*.test.js'",
+    "deploy": "wrangler pages deploy public",
+    "eval": "node scripts/stance-eval.mjs"
+  },
+  "devDependencies": {
+    "wrangler": "^3.90.0"
+  }
+}

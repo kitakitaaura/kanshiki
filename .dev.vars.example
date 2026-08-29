@@ -1,0 +1,49 @@
+# Copy to .dev.vars, or let ./setup.sh do it for you.
+#
+# Everything below the SELF-HOST block is only needed for a public hosted
+# deployment. If you are running this on your own machine, the defaults here
+# are already correct and you can ignore the rest of the file.
+
+# ---------------------------------------------------------------------------
+# SELF-HOST (this is the whole configuration you need)
+# ---------------------------------------------------------------------------
+
+# true  = use Ollama on this machine. Free, private, no rate limits.
+# false = use Cloudflare Workers AI. Requires a Cloudflare account.
+LOCAL_MODE=true
+
+OLLAMA_URL=http://localhost:11434
+
+# Measured with `npm run eval` on the bundled fixture:
+#   llama3.1:8b   4.9GB   7/8 correct   matches the hosted demo exactly
+#   llama3.2      2.0GB   5/8 correct   half the size, use it on low-spec machines
+OLLAMA_MODEL=llama3.1:8b
+
+# Optional. A free key raises NCBI's limit from 3 to 10 requests/second.
+# https://account.ncbi.nlm.nih.gov/settings/
+NCBI_API_KEY=
+
+# NCBI asks callers to identify themselves. Your email is sent to NCBI only.
+NCBI_TOOL=kanshiki
+NCBI_EMAIL=
+
+# ---------------------------------------------------------------------------
+# HOSTED DEMO ONLY (ignore these when self-hosting)
+# ---------------------------------------------------------------------------
+
+# The model used when LOCAL_MODE=false. Model names change; if calls start
+# failing, check `npx wrangler ai models` for current ones.
+WORKERS_AI_MODEL=@cf/meta/llama-3.1-8b-instruct-fp8
+
+# Per-IP rate limiting. Off unless DEPLOY_MODE=demo, so self-hosters never
+# inherit a limit meant to protect someone else's shared quota.
+DEPLOY_MODE=self-host
+RATE_LIMIT_PER_MINUTE=6
+RATE_LIMIT_BURST=3
+
+# Identifies this instance to OpenAlex for their faster "polite pool".
+OPENALEX_MAILTO=
+
+# Seconds before a claim check is abandoned. Local models are slower than
+# Workers AI, so self-host wants a longer timeout than the demo.
+REQUEST_TIMEOUT_SECONDS=120

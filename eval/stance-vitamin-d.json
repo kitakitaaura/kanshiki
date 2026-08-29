@@ -1,0 +1,113 @@
+{
+  "claim": "Vitamin D cures depression",
+  "query": "29943744[uid] OR 32749491[uid] OR 36368945[uid] OR 36509315[uid] OR 37415914[uid] OR 37852593[uid] OR 39394141[uid] OR 39552387[uid]",
+  "note": "Ground truth is each abstract's own stated conclusion, not a judgement of whether the finding is correct. The query pins exact PMIDs so the score measures the stance judge rather than search ranking.",
+  "truth": {
+    "29943744": {
+      "stance": "supports",
+      "why": "favorably impacted depression ratings in major depression"
+    },
+    "32749491": {
+      "stance": "contradicts",
+      "why": "these findings do not support the use of vitamin D3 to prevent depression"
+    },
+    "36368945": {
+      "stance": "supports",
+      "why": "significant decrease in BDI-II scores"
+    },
+    "36509315": {
+      "stance": "supports",
+      "why": "significant reduction in depression symptoms vs placebo"
+    },
+    "37415914": {
+      "stance": "contradicts",
+      "why": "not associated with an improvement in depressive symptoms"
+    },
+    "37852593": {
+      "stance": "supports",
+      "why": "has a benefit on improving depressive symptoms in adults with 25(OH)D above 50 nmol/L"
+    },
+    "39394141": {
+      "stance": "neutral",
+      "why": "migraine trial; depression scores were a secondary measure with no difference"
+    },
+    "39552387": {
+      "stance": "supports",
+      "why": "may effectively reduce depressive symptoms in short term"
+    }
+  },
+  "studies": [
+    {
+      "pmid": "39552387",
+      "title": "The effect of vitamin D supplementation on depression: a systematic review and dose-response meta-analysis of randomized controlled trials.",
+      "year": 2024,
+      "typeLabel": "Meta-analysis"
+    },
+    {
+      "pmid": "37852593",
+      "title": "The effect of vitamin D supplementation on primary depression: A meta-analysis.",
+      "year": 2024,
+      "typeLabel": "Meta-analysis"
+    },
+    {
+      "pmid": "36368945",
+      "title": "Effects of vitamin D supplementation on depression and some selected pro-inflammatory biomarkers: a double-blind randomized clinical trial.",
+      "year": 2022,
+      "typeLabel": "Randomized controlled trial"
+    },
+    {
+      "pmid": "35816192",
+      "title": "The effect of vitamin D supplementation on depressive symptoms in adults: A systematic review and meta-analysis of randomized controlled trials.",
+      "year": 2023,
+      "typeLabel": "Meta-analysis"
+    },
+    {
+      "pmid": "39394141",
+      "title": "Effects of probiotic and vitamin D co-supplementation on clinical symptoms, mental health, and inflammation in adult patients with migraine headache: a randomized, triple-blinded, placebo-controlled trial.",
+      "year": 2024,
+      "typeLabel": "Randomized controlled trial"
+    },
+    {
+      "pmid": "36509315",
+      "title": "Vitamin D protects against depression: Evidence from an umbrella meta-analysis on interventional and observational meta-analyses.",
+      "year": 2023,
+      "typeLabel": "Meta-analysis"
+    },
+    {
+      "pmid": "29943744",
+      "title": "Efficacy of vitamin D supplementation in major depression: A meta-analysis of randomized controlled trials.",
+      "year": 2019,
+      "typeLabel": "Meta-analysis"
+    },
+    {
+      "pmid": "36839310",
+      "title": "Effect of Vitamin D Supplementation on Depression in Adults: A Systematic Review of Randomized Controlled Trials (RCTs).",
+      "year": 2023,
+      "typeLabel": "Systematic review"
+    },
+    {
+      "pmid": "32749491",
+      "title": "Effect of Long-term Vitamin D3 Supplementation vs Placebo on Risk of Depression or Clinically Relevant Depressive Symptoms and on Change in Mood Scores: A Randomized Clinical Trial.",
+      "year": 2020,
+      "typeLabel": "Randomized controlled trial"
+    },
+    {
+      "pmid": "36462182",
+      "title": "Effect of vitamin D supplementation on depression in older Australian adults.",
+      "year": 2023,
+      "typeLabel": "Randomized controlled trial"
+    },
+    {
+      "pmid": "35156551",
+      "title": "Efficacy of B-vitamins and vitamin D therapy in improving depressive and anxiety disorders: a systematic review of randomized controlled trials.",
+      "year": 2023,
+      "typeLabel": "Systematic review"
+    },
+    {
+      "pmid": "37415914",
+      "title": "Vitamin D supplementation for depression in older adults: a meta-analysis of randomized controlled trials.",
+      "year": 2023,
+      "typeLabel": "Meta-analysis"
+    }
+  ]
+}

@@ -1,0 +1,324 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Kanshiki: how strong is the evidence?</title>
+<meta name="description" content="Paste a health claim. Kanshiki grades the published evidence behind it against the study-quality hierarchy and shows its sources." />
+<link rel="stylesheet" href="/styles.css" />
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='26' font-size='26'>🔬</text></svg>" />
+</head>
+<body>
+  <header class="site">
+    <div class="wordmark">
+      <span class="kanji" aria-hidden="true">鑑識</span>
+      <div>
+        <h1>Kanshiki</h1>
+        <p class="tagline">Forensic examination of health claims.</p>
+      </div>
+    </div>
+
+    <div class="ai-switch">
+      <span class="ai-switch-label" id="ai-switch-label">AI</span>
+      <button type="button" id="ai-toggle" class="switch" role="switch" aria-checked="true"
+              aria-labelledby="ai-switch-label" title="Turn the language model on or off">
+        <span class="switch-track"><span class="switch-thumb"></span></span>
+      </button>
+    </div>
+  </header>
+
+  <p class="ai-off-banner" id="ai-off-banner" hidden>
+    <strong>AI is off.</strong>
+    <span>Evidence grades, timelines, funding, retractions, and citations still work. Direction and
+    written summaries do not.</span>
+    <button type="button" class="linkish" id="ai-off-details">What changes?</button>
+  </p>
+
+  <main>
+    <div class="modes" role="tablist" aria-label="What to examine">
+      <button type="button" class="mode" id="mode-claim" role="tab" aria-selected="true" aria-controls="claim-panel">
+        <span class="mode-kanji" aria-hidden="true">鑑識</span>
+        <span class="mode-text"><strong>Check a claim</strong><em>Grade the evidence across studies</em></span>
+      </button>
+      <button type="button" class="mode" id="mode-study" role="tab" aria-selected="false" aria-controls="study-panel">
+        <span class="mode-kanji" aria-hidden="true">鑑定</span>
+        <span class="mode-text"><strong>Inspect a study</strong><em>Appraise one paper in depth</em></span>
+      </button>
+      <button type="button" class="mode" id="mode-collection" role="tab" aria-selected="false" aria-controls="collection-panel">
+        <span class="mode-kanji" aria-hidden="true">収集</span>
+        <span class="mode-text"><strong>Collection</strong><em><span id="collection-count">0</span> saved</em></span>
+      </button>
+    </div>
+
+    <div id="claim-panel" role="tabpanel">
+    <form id="claim-form" autocomplete="off">
+      <label for="claim">Paste a health claim, headline, or passage</label>
+      <textarea id="claim" name="claim" rows="3" maxlength="4000"
+        placeholder="e.g. Vitamin D cures depression"></textarea>
+      <div class="form-row">
+        <button type="submit" id="submit">Examine the evidence</button>
+        <span class="counter" id="counter" aria-live="polite"></span>
+      </div>
+      <details class="query-advanced" id="query-advanced">
+        <summary>Edit the PubMed query</summary>
+        <p class="query-help">
+          Leave this empty and Kanshiki builds the query for you. Fill it in and your text goes to
+          PubMed exactly as typed, including field tags and boolean operators, with no rewriting.
+        </p>
+        <input type="text" id="query-input" name="query"
+               placeholder='e.g. ("vitamin D"[MeSH Terms] OR cholecalciferol) AND depression[Title/Abstract]' />
+        <div class="query-actions">
+          <button type="button" class="copy-button" id="query-preview">Preview the automatic query</button>
+          <button type="button" class="copy-button" id="query-clear">Clear</button>
+        </div>
+      </details>
+
+      <div class="examples" id="examples">
+        <span>Try:</span>
+        <button type="button" class="chip">Vitamin D cures depression</button>
+        <button type="button" class="chip">Omega-3 supplements prevent heart attacks</button>
+        <button type="button" class="chip">Turmeric reduces arthritis pain</button>
+        <button type="button" class="chip">Ivermectin treats COVID-19</button>
+      </div>
+    </form>
+
+    </div>
+
+    <div id="study-panel" role="tabpanel" hidden>
+      <form id="study-form" autocomplete="off">
+        <label for="study-ref">Paste a PubMed link, a PMID, or a DOI</label>
+        <input type="text" id="study-ref" name="ref" placeholder="e.g. 9500320, or https://pubmed.ncbi.nlm.nih.gov/9500320/" />
+        <div class="form-row">
+          <button type="submit" id="study-submit">Inspect the study</button>
+        </div>
+        <div class="examples" id="study-examples">
+          <span>Try:</span>
+          <button type="button" class="chip" data-ref="9500320">A retracted paper</button>
+          <button type="button" class="chip" data-ref="38908535">An ivermectin meta-analysis</button>
+          <button type="button" class="chip" data-ref="10.1136/bmj.c7452">A DOI</button>
+        </div>
+      </form>
+    </div>
+
+    <div id="collection-panel" role="tabpanel" hidden>
+      <div class="collection-head">
+        <p class="collection-intro">
+          Saved on this device only. Nothing is uploaded and there is no account. Export the
+          collection to a file to move it to another browser or machine.
+        </p>
+        <div class="export-bar">
+          <span class="export-label">Export</span>
+          <button type="button" class="copy-button" id="collection-export-pdf">PDF report</button>
+          <button type="button" class="copy-button" id="collection-export-csv">CSV table</button>
+          <button type="button" class="copy-button" id="collection-export-ris">RIS</button>
+          <button type="button" class="copy-button" id="collection-export-json">JSON backup</button>
+          <button type="button" class="copy-button" id="collection-import">Import JSON</button>
+          <button type="button" class="copy-button" id="collection-clear">Clear all</button>
+          <input type="file" id="collection-file" accept="application/json,.json" hidden />
+        </div>
+      </div>
+      <ol class="collection-list" id="collection-list"></ol>
+      <p class="collection-empty" id="collection-empty">Nothing saved yet. Use "Add to collection" on a claim result or an inspected study.</p>
+    </div>
+
+    <section id="status" class="status" hidden aria-live="polite"></section>
+    <p class="cancel-row" id="cancel-row" hidden>
+      <button type="button" class="linkish" id="cancel-request">Cancel this request</button>
+    </p>
+
+    <section id="result" class="result" hidden>
+      <div class="verdict">
+        <div class="badges">
+          <span class="badge" id="badge"></span>
+          <span class="badge direction" id="direction-badge"></span>
+        </div>
+        <div class="verdict-meta">
+          <p class="claim-line">Claim examined: <strong id="claim-text"></strong></p>
+          <p class="query-line">
+          PubMed query: <code id="query-text"></code>
+          <span class="query-mode" id="query-mode"></span>
+          · <span id="match-count"></span>
+          <button type="button" class="linkish" id="query-edit">Edit and re-run</button>
+        </p>
+        </div>
+      </div>
+
+      <p class="grade-note">
+        Two separate judgements. The first badge grades the
+        <strong>strength of the research that exists</strong>: study designs, how many, how
+        recent. The second grades <strong>which way that research points</strong>, weighted by
+        the same study quality. A claim can be well studied and wrong.
+      </p>
+      <div class="spotlight" id="spotlight" hidden>
+        <p class="spotlight-intro">The evidence is split. Here is the strongest study on each side.</p>
+        <div class="spotlight-pair">
+          <article class="spot" data-side="for">
+            <h3>Strongest evidence for</h3>
+            <a class="spot-title" id="spot-for-title" target="_blank" rel="noopener noreferrer"></a>
+            <p class="spot-meta" id="spot-for-meta"></p>
+            <p class="spot-excerpt" id="spot-for-excerpt"></p>
+          </article>
+          <article class="spot" data-side="against">
+            <h3>Strongest evidence against</h3>
+            <a class="spot-title" id="spot-against-title" target="_blank" rel="noopener noreferrer"></a>
+            <p class="spot-meta" id="spot-against-meta"></p>
+            <p class="spot-excerpt" id="spot-against-excerpt"></p>
+          </article>
+        </div>
+      </div>
+
+      <p class="summary" id="summary"></p>
+      <ul class="rationale" id="rationale"></ul>
+      <p class="excluded-note" id="excluded-note" hidden></p>
+      <p class="related" id="related" hidden></p>
+      <p class="funding" id="funding"></p>
+      <section class="timeline" id="timeline" hidden>
+        <h3 class="timeline-title">How the evidence changed</h3>
+        <ol class="timeline-track" id="timeline-track"></ol>
+        <p class="timeline-note" id="timeline-note"></p>
+      </section>
+
+      <div class="score-strip" id="score-strip"></div>
+
+      <div class="export-bar">
+        <span class="export-label">Export</span>
+        <button type="button" class="copy-button" id="claim-export-pdf">PDF report</button>
+        <button type="button" class="copy-button" id="claim-export-csv">CSV table</button>
+        <button type="button" class="copy-button" id="claim-export-ris">RIS (all studies)</button>
+        <button type="button" class="copy-button" id="claim-add-collection">Add to collection</button>
+      </div>
+
+      <details id="sources-wrap">
+        <summary><span id="sources-count"></span></summary>
+        <ol class="sources" id="sources"></ol>
+      </details>
+
+      <p class="disclaimer">
+        Kanshiki grades <em>published evidence</em>, not your situation. It is not medical advice
+        and it does not tell you what to do. Read the sources, then talk to a clinician.
+      </p>
+    </section>
+    <section id="study-result" class="result" hidden>
+      <p class="inspector-back" id="inspector-back" hidden>
+        <button type="button" class="linkish" id="back-to-claim">← Back to the claim result</button>
+      </p>
+
+      <div class="retraction-banner" id="retraction-banner" hidden>
+        <strong id="retraction-headline">This paper has been retracted.</strong>
+        <span id="retraction-detail"></span>
+      </div>
+
+      <h2 class="study-title" id="study-title"></h2>
+      <p class="study-byline" id="study-byline"></p>
+      <p class="study-source" id="study-source"></p>
+
+      <h3 class="block-title">What this paper says</h3>
+      <p class="summary" id="study-summary"></p>
+      <p class="study-note" id="study-summary-note"></p>
+
+      <h3 class="block-title">Credibility signals</h3>
+      <div class="cred-head">
+        <span class="badge" id="cred-badge"></span>
+        <span class="cred-coverage" id="cred-coverage"></span>
+      </div>
+      <p class="cred-measures" id="cred-measures"></p>
+      <ul class="cred-signals" id="cred-signals"></ul>
+
+      <h3 class="block-title">Stats</h3>
+      <div class="score-strip" id="study-stats"></div>
+      <p class="study-note" id="study-stats-note"></p>
+
+      <h3 class="block-title">Cite this</h3>
+      <div class="cite-tabs" id="cite-tabs" role="tablist"></div>
+      <pre class="cite-box" id="cite-box"></pre>
+      <div class="cite-actions">
+        <button type="button" class="copy-button" id="cite-copy">Copy citation</button>
+        <button type="button" class="copy-button" id="cite-download" hidden>Download</button>
+      </div>
+
+      <div class="export-bar">
+        <span class="export-label">Export</span>
+        <button type="button" class="copy-button" id="study-add-collection">Add to collection</button>
+        <button type="button" class="copy-button" id="study-export-pdf">PDF report</button>
+        <button type="button" class="copy-button" id="study-export-csv">CSV row</button>
+        <button type="button" class="copy-button" id="study-export-ris">RIS</button>
+      </div>
+
+      <p class="disclaimer">
+        These are credibility signals: retraction status, study design, citation traction, venue,
+        author record, funding disclosure. They do not tell you whether the paper's findings are
+        correct. <a id="study-pubmed-link" href="#" target="_blank" rel="noopener noreferrer">Read the paper on PubMed</a>.
+      </p>
+    </section>
+  </main>
+
+  <p class="demo-note" id="demo-note" hidden>
+    <strong>This is a public demo and is rate limited.</strong>
+    <span>For unlimited use, run Kanshiki on your own machine for free. It is one command, your
+    data never leaves your computer, and there are no limits.</span>
+    <a href="/about.html#running" id="selfhost-link">How to self-host</a>
+  </p>
+
+  <footer>
+    <a href="/about.html">About and methodology</a> ·
+    <a href="/api.html">API</a> ·
+    Sources from <a href="https://pubmed.ncbi.nlm.nih.gov/" rel="noopener">PubMed</a> via NCBI E-utilities.
+    Evidence grade is computed by a fixed hierarchy; the written summary is model-generated.
+  </footer>
+
+  <dialog id="ai-warning" class="ai-dialog" aria-labelledby="ai-warning-title">
+    <h2 id="ai-warning-title">Turning AI off</h2>
+    <p class="ai-dialog-rationale">
+      Plenty of researchers would rather no language model went near their conclusions. That is a
+      reasonable position, not a superstition: a model's judgements are not reproducible the way a
+      fixed scoring rule is, they can be confidently wrong, and checking them means re-reading every
+      abstract yourself. This switch exists so you can keep the parts of Kanshiki that are
+      deterministic and auditable, and leave the rest.
+    </p>
+
+    <p class="ai-dialog-lead">
+      Nothing here is hidden from you either way: the evidence grade never used AI, and every
+      model-driven figure is labelled as one. But two things Kanshiki does are model-driven and
+      will stop, so this is a real change in what you get back, not a cosmetic setting.
+    </p>
+
+    <h3>What you lose</h3>
+    <ul class="ai-dialog-list" data-kind="lose">
+      <li>
+        <strong>Direction of the evidence.</strong> Whether studies support or contradict a claim is
+        judged per study by the model. With it off, the direction badge reads
+        "Direction not assessed" and the contradiction spotlight never appears.
+      </li>
+      <li>
+        <strong>Plain-English summaries.</strong> A claim gets a sentence assembled from study
+        metadata instead of a written verdict. A single study shows its raw abstract rather than an
+        explanation of it.
+      </li>
+      <li>
+        <strong>Search quality.</strong> Your claim is turned into a PubMed query by keyword
+        stripping rather than by the model, so the search is broader and cruder, and you may be
+        graded on a different, less relevant set of studies.
+      </li>
+    </ul>
+
+    <h3>What still works, unchanged</h3>
+    <ul class="ai-dialog-list" data-kind="keep">
+      <li>The evidence strength grade, its quality tiers, gates, and score. None of it ever used AI.</li>
+      <li>The evidence-over-time timeline.</li>
+      <li>Retraction detection, and the funding breakdown.</li>
+      <li>Study credibility scoring, citation and venue statistics, and all four citation formats.</li>
+    </ul>
+
+    <p class="ai-dialog-note">
+      It is also considerably faster: roughly 2 seconds for a claim instead of 20.
+    </p>
+
+    <div class="ai-dialog-actions">
+      <button type="button" class="copy-button" id="ai-warning-cancel">Keep AI on</button>
+      <button type="button" id="ai-warning-confirm">Turn AI off</button>
+    </div>
+  </dialog>
+
+  <script src="/app.js" type="module"></script>
+</body>
+</html>

@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>About Kanshiki</title>
+<meta name="description" content="How Kanshiki grades health claims, where its data comes from, what it cannot tell you, and how to run it yourself for free." />
+<link rel="stylesheet" href="/styles.css" />
+<link rel="stylesheet" href="/api.css" />
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='26' font-size='26'>🔬</text></svg>" />
+</head>
+<body>
+  <header class="site">
+    <div class="wordmark">
+      <span class="kanji" aria-hidden="true">鑑識</span>
+      <div>
+        <h1>About Kanshiki</h1>
+        <p class="tagline">What it does, what it cannot do, and how to run it yourself.</p>
+      </div>
+    </div>
+  </header>
+
+  <main class="doc">
+    <p class="lead">
+      Kanshiki takes a health claim and tells you how strong the published research on it actually
+      is, and which way that research points. Kantei takes a single study and appraises it. Both
+      show their working: every study is listed, every score is computed by rules you can read.
+    </p>
+
+    <nav class="toc">
+      <a href="#what">What it does</a>
+      <a href="#running">Two ways to run it</a>
+      <a href="#sources">Data sources</a>
+      <a href="#ai">Where AI is used</a>
+      <a href="#limits">What it cannot tell you</a>
+      <a href="#notadvice">Not medical advice</a>
+    </nav>
+
+    <section id="what">
+      <h2>What it does</h2>
+      <p>
+        <strong>Kanshiki (鑑識, forensic examination)</strong> takes a claim like "turmeric reduces
+        arthritis pain", searches PubMed, sorts what it finds by study design, and produces two
+        separate judgements.
+      </p>
+      <ul>
+        <li>
+          <strong>Strength</strong> grades how good the research on the topic is: systematic reviews
+          and meta-analyses count for more than randomized trials, which count for more than
+          observational studies, which count for more than case reports. Recency, sample size, and
+          replication all factor in. This is arithmetic, not opinion, and the thresholds are
+          published in the response.
+        </li>
+        <li>
+          <strong>Direction</strong> grades which way that research points, weighted by the same
+          quality tiers so one meta-analysis outvotes five case reports.
+        </li>
+      </ul>
+      <p>
+        They are deliberately separate, because the interesting cases need both. "Ivermectin treats
+        COVID-19" has <em>strong</em> evidence that <em>contradicts</em> it. A claim can be
+        thoroughly studied and wrong.
+      </p>
+      <p>
+        <strong>Kantei (鑑定, appraisal)</strong> looks at one paper: a plain summary, citation and
+        venue statistics, author track record, funding disclosure, and retraction status. Paste a
+        PubMed link, a PMID, or a DOI, or click any study in a claim result.
+      </p>
+    </section>
+
+    <section id="running">
+      <h2>Two ways to run it</h2>
+      <p>
+        These are not two tiers of the same product. Self-hosting is the real thing. The public
+        demo exists so you can try it before deciding.
+      </p>
+
+      <div class="scroll">
+        <table class="api-table">
+          <thead><tr><th></th><th>Self-hosted</th><th>Public demo</th></tr></thead>
+          <tbody>
+            <tr><td>Cost</td><td>Free, forever</td><td>Free</td></tr>
+            <tr><td>Rate limits</td><td>None</td><td>Yes, a few checks per minute</td></tr>
+            <tr><td>Where the model runs</td><td>Your machine, via Ollama</td><td>Cloudflare Workers AI</td></tr>
+            <tr><td>Where your claims go</td><td>Nowhere. They never leave your computer.</td><td>Cloudflare, and PubMed for the search</td></tr>
+            <tr><td>Setup</td><td>One command, plus a model download</td><td>None</td></tr>
+            <tr><td>Speed</td><td>Depends on your hardware</td><td>Around 10 seconds per claim</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>
+        <strong>If you are doing real work, self-host.</strong> A literature review means many
+        claims and many studies, and a shared demo cannot support that for everyone at once. Running
+        it yourself removes the limits entirely and keeps what you are researching private, which
+        matters more than it sounds when the subject is health.
+      </p>
+      <p>
+        Accuracy is not the trade-off. On the bundled evaluation, a local
+        <code>llama3.1:8b</code> scores exactly the same as the hosted model.
+      </p>
+      <pre class="code"><code>git clone &lt;repo&gt; &amp;&amp; cd kanshiki
+./setup.sh</code></pre>
+      <p class="aside">
+        The script checks what you have, installs nothing behind your back, pulls the model if it is
+        missing, and starts the app. The model download is a few gigabytes and happens once.
+      </p>
+    </section>
+
+    <section id="sources">
+      <h2>Data sources</h2>
+      <ul>
+        <li>
+          <strong><a href="https://pubmed.ncbi.nlm.nih.gov/" rel="noopener">PubMed</a></strong>, via
+          NCBI E-utilities. Every study, abstract, publication type, funding statement, and
+          retraction flag comes from here.
+        </li>
+        <li>
+          <strong><a href="https://openalex.org/" rel="noopener">OpenAlex</a></strong>. Citation
+          counts, venue statistics, and author records in the study inspector.
+        </li>
+        <li>
+          <strong><a href="https://www.semanticscholar.org/product/api" rel="noopener">Semantic Scholar</a></strong>,
+          used only when OpenAlex has no record.
+        </li>
+      </ul>
+      <p>
+        If you build on this, cite those sources directly. Kanshiki arranges their data; it does not
+        produce it.
+      </p>
+    </section>
+
+    <section id="ai">
+      <h2>Where AI is used, and where it is not</h2>
+      <p>
+        Most of what Kanshiki does is deterministic. The same studies always produce the same grade.
+      </p>
+      <div class="scroll">
+        <table class="api-table">
+          <thead><tr><th>Step</th><th>How it works</th></tr></thead>
+          <tbody>
+            <tr><td>Evidence strength grade</td><td>Fixed rules. No AI.</td></tr>
+            <tr><td>Study design classification</td><td>PubMed publication types. No AI.</td></tr>
+            <tr><td>Timeline, funding mix, spotlight selection</td><td>Fixed rules. No AI.</td></tr>
+            <tr><td>Credibility signals and retraction override</td><td>Fixed rules. No AI.</td></tr>
+            <tr><td>Citations in every format</td><td>Pure formatting. No AI.</td></tr>
+            <tr><td>Turning your claim into a search query</td><td>Language model</td></tr>
+            <tr><td>Judging which way each study points</td><td>Language model</td></tr>
+            <tr><td>The written summary</td><td>Language model</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>
+        <strong>You can switch the model off entirely</strong> with the AI toggle in the header.
+        Grades, timelines, funding, retractions, credibility scores, and citations all keep working.
+        You lose the direction badge and the written summaries, and the search query is built by
+        keyword matching instead.
+      </p>
+      <p>
+        Plenty of researchers would rather no language model went near their conclusions. That is a
+        reasonable position: model judgements are not reproducible the way a fixed scoring rule is,
+        they can be confidently wrong, and auditing them means re-reading every abstract yourself.
+        The toggle exists so you can keep the deterministic half and leave the rest.
+      </p>
+    </section>
+
+    <section id="limits">
+      <h2>What it cannot tell you</h2>
+
+      <h3>It reads abstracts, not papers</h3>
+      <p>
+        Direction judgements and study summaries come from titles and abstracts. Full text is not
+        fetched: NCBI does not serve it and most papers are paywalled. An abstract can omit or
+        understate what the full paper shows.
+      </p>
+
+      <h3>The model judging direction is fallible</h3>
+      <p>
+        On the bundled evaluation, the current models get 7 of 8 studies right. That is useful, and
+        it is not the same as correct. Per-study judgements are shown next to each study precisely
+        so you can check them. If one looks wrong, it may well be wrong.
+      </p>
+
+      <h3>Citation and venue metrics measure attention, not truth</h3>
+      <p>
+        A heavily cited paper in a prestigious journal is a paper other researchers noticed. That is
+        a signal about standing, not about whether the finding replicates. Kantei's credibility score
+        says so on every response.
+      </p>
+
+      <h3>Retraction is the one hard override</h3>
+      <p>
+        A retracted paper is excluded from the evidence grade entirely, whatever its other signals
+        look like, and is capped near the floor in the study inspector. It is still shown and still
+        labelled, because knowing a retracted paper exists on a topic is useful.
+      </p>
+
+      <h3>The search shapes the answer</h3>
+      <p>
+        A grade only reflects the studies the query returned. A different query returns different
+        studies. That is why the query is shown on every result and why you can edit it and re-run.
+      </p>
+    </section>
+
+    <section id="notadvice">
+      <h2>Not medical advice</h2>
+      <p>
+        <strong>Kanshiki grades published evidence. It does not grade your situation.</strong> It
+        does not know your history, your medications, your risk factors, or anything else about you,
+        and it is not designed to. A claim that is well supported in the literature can still be
+        wrong for a particular person, and a claim with thin evidence is not thereby false.
+      </p>
+      <p>
+        Nothing here is a diagnosis, a treatment recommendation, or a reason to start or stop
+        anything. Read the studies, then talk to a clinician who knows your case.
+      </p>
+    </section>
+  </main>
+
+  <footer>
+    <a href="/">Back to Kanshiki</a> · <a href="/api.html">API</a> ·
+    Sources from <a href="https://pubmed.ncbi.nlm.nih.gov/" rel="noopener">PubMed</a> and
+    <a href="https://openalex.org/" rel="noopener">OpenAlex</a>
+  </footer>
+</body>
+</html>

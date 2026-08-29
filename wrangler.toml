@@ -1,0 +1,13 @@
+name = "kanshiki"
+compatibility_date = "2024-11-01"
+pages_build_output_dir = "public"
+
+# Workers AI. Used when LOCAL_MODE is not "true".
+# Harmless locally: the binding is simply never called in LOCAL_MODE.
+[ai]
+binding = "AI"
+
+[vars]
+LOCAL_MODE = "false"
+NCBI_TOOL = "kanshiki"
+WORKERS_AI_MODEL = "@cf/meta/llama-3.1-8b-instruct-fp8"
