@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "wrangler pages dev",
     "test": "node --test 'test/*.test.js'",
-    "deploy": "wrangler pages deploy public",
+    "deploy": "wrangler pages deploy public --project-name kanshiki --branch production",
     "eval": "node scripts/stance-eval.mjs"
   },
   "devDependencies": {

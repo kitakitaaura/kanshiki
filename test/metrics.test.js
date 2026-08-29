@@ -357,3 +357,142 @@ test("an oversized cached field is truncated rather than passed through", () => 
   assert.ok(cached.abstract.length <= 20000);
   assert.ok(cached.title.length <= 1000);
 });
+
+// --- caching (v3) --------------------------------------------------------
+
+test("upstream responses are served from the edge cache when available", async () => {
+  const original = globalThis.caches;
+  const store = new Map();
+  let upstreamCalls = 0;
+
+  globalThis.caches = {
+    default: {
+      match: async (req) => store.get(req.url) ?? undefined,
+      put: async (req, res) => store.set(req.url, res),
+    },
+  };
+  const stub = stubFetch({
+    "/works/": () => {
+      upstreamCalls += 1;
+      return OPENALEX_WORK;
+    },
+    "/sources/": OPENALEX_SOURCE,
+    "/authors/": OPENALEX_AUTHOR,
+  });
+
+  try {
+    const first = await fetchStudyMetrics(RECORD, {}, METRICS_CONFIG, YEAR);
+    const second = await fetchStudyMetrics(RECORD, {}, METRICS_CONFIG, YEAR);
+
+    assert.equal(first.citations, 400);
+    assert.equal(second.citations, 400, "a cached response must parse the same way");
+    assert.equal(upstreamCalls, 1, "the second lookup must not hit the upstream service");
+  } finally {
+    stub.restore();
+    globalThis.caches = original;
+  }
+});
+
+test("a broken cache never breaks a lookup", async () => {
+  const original = globalThis.caches;
+  globalThis.caches = {
+    default: {
+      match: async () => {
+        throw new Error("cache exploded");
+      },
+      put: async () => {
+        throw new Error("cache exploded");
+      },
+    },
+  };
+  const stub = stubFetch({ "/works/": OPENALEX_WORK, "/sources/": OPENALEX_SOURCE, "/authors/": OPENALEX_AUTHOR });
+  try {
+    const metrics = await fetchStudyMetrics(RECORD, {}, METRICS_CONFIG, YEAR);
+    assert.equal(metrics.available, true);
+    assert.equal(metrics.citations, 400);
+  } finally {
+    stub.restore();
+    globalThis.caches = original;
+  }
+});
+
+test("a rate-limited upstream reports the status rather than a blank result", async () => {
+  const stub = stubFetch({
+    "api.openalex.org": { status: 429, statusText: "Too Many Requests" },
+    "semanticscholar.org": { status: 429, statusText: "Too Many Requests" },
+  });
+  try {
+    const metrics = await fetchStudyMetrics(RECORD, {}, METRICS_CONFIG, YEAR);
+    assert.equal(metrics.available, false);
+    assert.match(metrics.reason, /429/);
+    assert.match(metrics.note, /429/);
+  } finally {
+    stub.restore();
+  }
+});
+
+test("a surname alone is not treated as an author match", async () => {
+  const stub = stubFetch({
+    "/works/": {
+      body: {
+        ...OPENALEX_WORK.body,
+        authorships: [{ author: { id: "https://openalex.org/A9", display_name: "Denis Wakefield" } }],
+      },
+    },
+    "/sources/": OPENALEX_SOURCE,
+    "/authors/": { body: { display_name: "Denis Wakefield", summary_stats: { h_index: 6 }, works_count: 40 } },
+  });
+  try {
+    const metrics = await fetchStudyMetrics(
+      { ...RECORD, authors: [{ last: "Wakefield", fore: "A J", initials: "AJ", name: "A J Wakefield" }] },
+      {},
+      METRICS_CONFIG,
+      YEAR,
+    );
+    assert.equal(metrics.authors[0].matched, false, "a different first name is a different person");
+    assert.equal(metrics.authors[0].hIndex, null, "no record may be attributed to the wrong person");
+  } finally {
+    stub.restore();
+  }
+});
+
+test("the same person written differently still matches", async () => {
+  for (const indexed of ["Andrew J Wakefield", "A J Wakefield", "A. Wakefield"]) {
+    const stub = stubFetch({
+      "/works/": {
+        body: {
+          ...OPENALEX_WORK.body,
+          authorships: [{ author: { id: "https://openalex.org/A1", display_name: indexed } }],
+        },
+      },
+      "/sources/": OPENALEX_SOURCE,
+      "/authors/": { body: { display_name: indexed, summary_stats: { h_index: 34 }, works_count: 83 } },
+    });
+    try {
+      const metrics = await fetchStudyMetrics(
+        { ...RECORD, authors: [{ last: "Wakefield", fore: "A J", initials: "AJ" }] },
+        {},
+        METRICS_CONFIG,
+        YEAR,
+      );
+      assert.equal(metrics.authors[0].matched, true, `should match ${indexed}`);
+    } finally {
+      stub.restore();
+    }
+  }
+});
+
+test("a throttled OpenAlex is reported differently from an unindexed one", async () => {
+  const throttled = stubFetch({
+    "api.openalex.org": { status: 429, statusText: "Too Many Requests" },
+    "semanticscholar.org": { body: { citationCount: 5, year: 2018, venue: "V", authors: [] } },
+  });
+  try {
+    const metrics = await fetchStudyMetrics(RECORD, {}, METRICS_CONFIG, YEAR);
+    assert.equal(metrics.source, "semantic-scholar");
+    assert.match(metrics.note, /unavailable/i);
+    assert.doesNotMatch(metrics.note, /had no record/i, "429 is not the same as not indexed");
+  } finally {
+    throttled.restore();
+  }
+});
