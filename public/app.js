@@ -572,6 +572,7 @@ async function inspectStudy(ref, { fromClaim = false } = {}) {
     studyInput.value = ref;
   }
 
+  const signal = beginRequest();
   startStages(stagesFor(STUDY_STAGES));
 
   const cached = lastClaimStudies.get(String(ref));
@@ -591,9 +592,11 @@ async function inspectStudy(ref, { fromClaim = false } = {}) {
     document.getElementById("study-result").scrollIntoView({ behavior: "smooth", block: "start" });
   } catch (err) {
     stopStages();
-    showStatus(err.message || "Could not inspect that study.", true);
+    if (isAbort(err)) statusEl.hidden = true;
+    else showStatus(err.message || "Could not inspect that study.", true);
   } finally {
     inFlight = false;
+    inFlightController = null;
     studySubmit.disabled = false;
   }
 }
