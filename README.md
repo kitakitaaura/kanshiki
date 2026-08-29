@@ -4,7 +4,7 @@ Paste a health claim. Kanshiki finds what has actually been published about it o
 PubMed, grades that evidence against a fixed study-quality hierarchy, and writes a
 short, honest summary with every source linked.
 
-It grades **evidence**, not people. It gives no diagnosis and no personal medical advice.
+It gives no diagnosis and no personal medical advice.
 
 ## How it works
 
@@ -21,7 +21,7 @@ PubMed E-utilities  - esearch → esummary → efetch (abstracts)
 JSON → browser
 ```
 
-## Two badges, two questions
+## Two badges
 
 **Strength** answers *how good is the research that exists on this topic* - study designs,
 how many, how recent. **Direction** answers *which way does that research point*, weighted
@@ -228,11 +228,3 @@ the score thresholds, and the structural gates (for example: no "Strong" without
 systematic review, a meta-analysis, or at least two RCTs). Change the numbers, run
 `npm test`, and the tests will tell you what you broke.
 
-## What v1 deliberately does not do
-
-No accounts, no history, no database. No Cochrane (PubMed only). No image or
-screenshot input.
-
-Direction is judged from titles and abstracts only, by a small model, on the top 12 studies
-by quality tier. It is a reading of the literature's balance, not a replication of a
-systematic review - treat it as a pointer to the sources, which are all linked.
