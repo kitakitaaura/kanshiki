@@ -1,4 +1,4 @@
-# Kanshiki 鑑識
+# Kanshiki 鑑識 by KitaKita
 
 Paste a health claim. Kanshiki finds what has actually been published about it on
 PubMed, grades that evidence against a fixed study-quality hierarchy, and writes a
@@ -10,24 +10,24 @@ It grades **evidence**, not people. It gives no diagnosis and no personal medica
 
 ```
 claim text
-  ↓  AI call #1  — extract one testable claim + a PubMed query
-PubMed E-utilities  — esearch → esummary → efetch (abstracts)
-  ↓  classify      — publication type → evidence tier
-  ↓  score         — strength, pure function, no AI (src/scoring.js)
-  ↓  AI call #2    — stance per study: supports / contradicts / neutral
-  ↓  score         — direction, pure function, weighted by the same tiers
-  ↓  AI call #3    — plain-English verdict over the graded, stanced list
-  ↓  report        — funding mix, timeline, contradiction spotlight (all pure)
+  ↓  AI call #1  - extract one testable claim + a PubMed query
+PubMed E-utilities  - esearch → esummary → efetch (abstracts)
+  ↓  classify      - publication type → evidence tier
+  ↓  score         - strength, pure function, no AI (src/scoring.js)
+  ↓  AI call #2    - stance per study: supports / contradicts / neutral
+  ↓  score         - direction, pure function, weighted by the same tiers
+  ↓  AI call #3    - plain-English verdict over the graded, stanced list
+  ↓  report        - funding mix, timeline, contradiction spotlight (all pure)
 JSON → browser
 ```
 
 ## Two badges, two questions
 
-**Strength** answers *how good is the research that exists on this topic* — study designs,
+**Strength** answers *how good is the research that exists on this topic* - study designs,
 how many, how recent. **Direction** answers *which way does that research point*, weighted
 by the same quality tiers, so a meta-analysis outvotes five case reports.
 
-They are deliberately independent, because the interesting cases need both:
+They are independent, because the interesting cases need both:
 
 | Claim | Strength | Direction |
 | --- | --- | --- |
@@ -35,7 +35,7 @@ They are deliberately independent, because the interesting cases need both:
 | Vitamin D cures depression | Strong evidence | Mixed evidence |
 
 Direction stays **unassessed** unless studies carrying at least 30% of the total weight got a
-for-or-against stance — no direction is claimed from a handful of judgements. Stance
+for-or-against stance - no direction is claimed from a handful of judgements. Stance
 classification is batched 4 studies per call (small local models default everything to
 "neutral" when handed a long list); anything the model skips or mislabels counts as no vote,
 never as agreement.
@@ -43,7 +43,7 @@ never as agreement.
 | File | Role |
 | --- | --- |
 | `functions/api/check-claim.js` | The `POST /api/check-claim` route |
-| `functions/api/health.js` | `GET /api/health` — which AI backend is live |
+| `functions/api/health.js` | `GET /api/health` - which AI backend is live |
 | `src/pipeline.js` | Orchestration, prompts, non-AI fallbacks |
 | `src/pubmed.js` | E-utilities client, abstract parsing, sample-size sniffing |
 | `src/classify.js` | Publication type → evidence tier |
@@ -53,16 +53,16 @@ never as agreement.
 | `src/credibility.js` | Study-level credibility signals (pure, `CREDIBILITY_CONFIG`) |
 | `src/citations.js` | APA / MLA / Chicago / BibTeX formatting (pure) |
 | `src/scoring.js` | The hierarchy, weights, thresholds, gates (pure) |
-| `src/ai.js` | `getAIResponse()` — Ollama or Workers AI, one shape out |
+| `src/ai.js` | `getAIResponse()` - Ollama or Workers AI, one shape out |
 | `public/` | Static frontend (vanilla JS, no build step) |
 
 ## Self-hosting (the recommended way to use this)
 
 Kanshiki is built to run on your own machine. Free forever, no rate limits, and the claims you
-check never leave your computer. If you are doing real literature work, this is the path.
+check never leave your computer.
 
 ```bash
-git clone <repo> && cd kanshiki
+git clone https://github.com/kitakitaaura/kanshiki.git && cd kanshiki
 ./setup.sh
 ```
 
@@ -125,13 +125,13 @@ dialog spelling out the trade-off before it applies; turning it back on needs no
 confirmation. A banner stays visible while it is off.
 
 The dialog opens by saying why the option exists: plenty of researchers would rather no
-language model went near their conclusions, and that is a reasonable position — model
+language model went near their conclusions, and that is a reasonable position - model
 judgements are not reproducible the way a fixed scoring rule is, they can be confidently
 wrong, and auditing them means re-reading every abstract yourself. The switch lets you keep
 the deterministic half of Kanshiki and leave the rest.
 
 With AI off the browser sends `useAi: false` and the server takes the deterministic
-branches directly — it does not attempt a call and let it fail, so nothing is logged as an
+branches directly - it does not attempt a call and let it fail, so nothing is logged as an
 error and no time is spent on a doomed request. The response carries `meta.aiDisabled`,
 which the UI uses to say "AI is switched off" rather than "the model was unavailable".
 
@@ -215,7 +215,7 @@ dashboard or with `wrangler pages secret put`:
 
 Three model calls plus PubMed means roughly 10–20s per claim on a local 3B model
 (faster once it is warm). The stance chunks are issued in parallel, but Ollama serializes
-them by default — start it with `OLLAMA_NUM_PARALLEL=3 ollama serve` to get real
+them by default - start it with `OLLAMA_NUM_PARALLEL=3 ollama serve` to get real
 concurrency, or lower `STUDIES_FOR_STANCE` in `src/pipeline.js`.
 
 ## Tuning the grade
@@ -235,4 +235,4 @@ screenshot input.
 
 Direction is judged from titles and abstracts only, by a small model, on the top 12 studies
 by quality tier. It is a reading of the literature's balance, not a replication of a
-systematic review — treat it as a pointer to the sources, which are all linked.
+systematic review - treat it as a pointer to the sources, which are all linked.
